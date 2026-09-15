@@ -10,6 +10,10 @@ import { r2Storage } from '@payloadcms/storage-r2'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { Posts } from './collections/Posts'
+import { Categories } from './collections/Categories'
+import { Authors } from './collections/Authors'
+import { defaultLocale, localeOptions } from './locales'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -63,8 +67,31 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media],
+  collections: [Posts, Categories, Authors, Media, Users],
   editor: lexicalEditor(),
+  /**
+   * Nine locales, mirroring the public site.
+   *
+   * `fallback` is on so the admin panel shows the Dutch original next to an
+   * empty translation instead of a blank screen. The frontend asks for
+   * `fallback-locale=none` and therefore never receives it — a post with no
+   * German translation is simply absent from the German blog, rather than a
+   * German URL serving Dutch copy. That distinction is the whole point: the
+   * second kind of page gets indexed, ranks for nothing and dilutes the real
+   * one.
+   */
+  localization: {
+    locales: localeOptions,
+    defaultLocale,
+    fallback: true,
+  },
+  /**
+   * The public site is a separate deployment, so it is cross-origin to this
+   * one. Reads are public, but listing the origins keeps browser-side calls
+   * from anywhere else out.
+   */
+  cors: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [],
+  csrf: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [],
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
