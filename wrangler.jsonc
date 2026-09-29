@@ -16,6 +16,7 @@
   // GENOVA_FRONTEND_REVALIDATE_SECRET — are set with `wrangler secret put` and
   // must never be listed here.
   "vars": {
+    "CMS_URL": "https://payload.devoratv.com",
     "FRONTEND_URL": "https://www.devoratv.com",
     "FRONTEND_REVALIDATE_URL": "https://www.devoratv.com/api/revalidate",
     "GENOVA_FRONTEND_URL": "https://www.genovatv.net",
