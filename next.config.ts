@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
   // Read more: https://opennext.js.org/cloudflare/howtos/workerd
   serverExternalPackages: ['jose', 'pg-cloudflare'],
 
+  // Loading payload.config starts a Wrangler platform proxy, and every build
+  // worker loads it. Parallel workers then fight over the same local SQLite
+  // state and the build dies with SQLITE_BUSY, so page data is collected in a
+  // single worker.
+  experimental: {
+    cpus: 1,
+  },
+
   // Your Next.js config here
   webpack: (webpackConfig) => {
     webpackConfig.resolve.extensionAlias = {
