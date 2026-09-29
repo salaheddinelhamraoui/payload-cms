@@ -36,6 +36,12 @@ const isCLI = process.argv.some((value) => {
 })
 const isProduction = process.env.NODE_ENV === 'production'
 
+/** Where the admin panel itself is served from. */
+const cmsOrigins = [
+  process.env.CMS_URL,
+  ...(isProduction ? [] : ['http://localhost:3000']),
+].filter((url): url is string => Boolean(url))
+
 const createLog =
   (level: string, fn: typeof console.log) => (objOrMsg: object | string, msg?: string) => {
     if (typeof objOrMsg === 'string') {
@@ -90,9 +96,14 @@ export default buildConfig({
    * The public sites are separate deployments, so they are cross-origin to
    * this one. Reads are public, but listing the origins keeps browser-side
    * calls from anywhere else out.
+   *
+   * The CMS's own origin must be on the CSRF list too: once the list is
+   * non-empty, Payload ignores the login cookie on any write whose `Origin` is
+   * missing from it — which made the admin panel read-only (every save and
+   * delete answered "not allowed").
    */
   cors: siteOrigins,
-  csrf: siteOrigins,
+  csrf: [...siteOrigins, ...cmsOrigins],
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
