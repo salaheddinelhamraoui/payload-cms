@@ -13,6 +13,7 @@ import { slugField } from '../fields/slug'
 import { seoField } from '../fields/seo'
 import { revalidateAfterChange, revalidateAfterDelete } from '../hooks/revalidate'
 import { readingMinutes } from '../lib/lexical-text'
+import { defaultSite, siteByValue, siteOptions } from '../sites'
 
 /**
  * Keeps the "5 min read" label honest without asking anyone to count words.
@@ -49,10 +50,12 @@ export const Posts: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'slug', '_status', 'publishedAt', 'updatedAt'],
+    defaultColumns: ['title', 'slug', 'sites', '_status', 'publishedAt', 'updatedAt'],
     group: 'Blog',
+    // Previews on the first site the post is published to.
     preview: (doc, { locale }) => {
-      const base = process.env.FRONTEND_URL
+      const site = siteByValue((doc?.sites as string[] | undefined)?.[0] ?? defaultSite)
+      const base = site?.url
       if (!base || !doc?.slug) return null
       return `${base}/${locale || 'nl'}/blog/${doc.slug}`
     },
@@ -73,6 +76,19 @@ export const Posts: CollectionConfig = {
     afterDelete: [revalidateAfterDelete],
   },
   fields: [
+    {
+      name: 'sites',
+      type: 'select',
+      hasMany: true,
+      required: true,
+      index: true,
+      options: siteOptions,
+      defaultValue: [defaultSite],
+      admin: {
+        position: 'sidebar',
+        description: 'The websites this post is published on. Pick one or both.',
+      },
+    },
     {
       name: 'title',
       type: 'text',

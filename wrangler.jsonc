@@ -11,12 +11,15 @@
     // see https://developers.cloudflare.com/workers/configuration/compatibility-flags/#global-fetch-strictly-public
     "global_fetch_strictly_public",
   ],
-  // Non-secret config the Worker reads via process.env. The two secrets that
-  // pair with these — PAYLOAD_SECRET and FRONTEND_REVALIDATE_SECRET — are set
-  // with `wrangler secret put` and must never be listed here.
+  // Non-secret config the Worker reads via process.env. The secrets that pair
+  // with these — PAYLOAD_SECRET, FRONTEND_REVALIDATE_SECRET and
+  // GENOVA_FRONTEND_REVALIDATE_SECRET — are set with `wrangler secret put` and
+  // must never be listed here.
   "vars": {
     "FRONTEND_URL": "https://www.devoratv.com",
     "FRONTEND_REVALIDATE_URL": "https://www.devoratv.com/api/revalidate",
+    "GENOVA_FRONTEND_URL": "https://www.genovatv.net",
+    "GENOVA_FRONTEND_REVALIDATE_URL": "https://www.genovatv.net/api/revalidate",
   },
 
   "assets": {

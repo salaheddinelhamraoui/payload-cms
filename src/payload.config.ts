@@ -14,6 +14,7 @@ import { Posts } from './collections/Posts'
 import { Categories } from './collections/Categories'
 import { Authors } from './collections/Authors'
 import { defaultLocale, localeOptions } from './locales'
+import { siteOrigins } from './sites'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -86,12 +87,12 @@ export default buildConfig({
     fallback: true,
   },
   /**
-   * The public site is a separate deployment, so it is cross-origin to this
-   * one. Reads are public, but listing the origins keeps browser-side calls
-   * from anywhere else out.
+   * The public sites are separate deployments, so they are cross-origin to
+   * this one. Reads are public, but listing the origins keeps browser-side
+   * calls from anywhere else out.
    */
-  cors: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [],
-  csrf: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [],
+  cors: siteOrigins,
+  csrf: siteOrigins,
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),

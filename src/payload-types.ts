@@ -135,6 +135,10 @@ export interface UserAuthOperations {
 export interface Post {
   id: number;
   /**
+   * The websites this post is published on. Pick one or both.
+   */
+  sites: ('devoratv' | 'genovatv')[];
+  /**
    * The <h1> and the default <title>. Lead with the subject, not the brand — the brand is appended automatically.
    */
   title: string;
@@ -395,6 +399,7 @@ export interface PayloadMigration {
  * via the `definition` "posts_select".
  */
 export interface PostsSelect<T extends boolean = true> {
+  sites?: T;
   title?: T;
   slug?: T;
   excerpt?: T;

@@ -1,5 +1,7 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, PayloadRequest } from 'payload'
 
+import { type Site, siteByValue, sites } from '../sites'
+
 /**
  * Tells the public site that a document changed.
  *
@@ -14,14 +16,12 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, PayloadReque
  * into a failed save would be the worse outcome. The pages' own time-based
  * revalidation is the backstop.
  */
-async function ping(req: PayloadRequest, tags: string[]): Promise<void> {
-  const endpoint = process.env.FRONTEND_REVALIDATE_URL
-  const secret = process.env.FRONTEND_REVALIDATE_SECRET
+async function ping(req: PayloadRequest, site: Site, tags: string[]): Promise<void> {
+  const endpoint = site.revalidateUrl
+  const secret = site.revalidateSecret
 
   if (!endpoint || !secret) {
-    req.payload.logger.debug(
-      'FRONTEND_REVALIDATE_URL or FRONTEND_REVALIDATE_SECRET unset — skipping revalidation.',
-    )
+    req.payload.logger.debug(`${site.label}: revalidate URL or secret unset — skipping revalidation.`)
     return
   }
 
@@ -35,11 +35,11 @@ async function ping(req: PayloadRequest, tags: string[]): Promise<void> {
 
     if (!response.ok) {
       req.payload.logger.warn(
-        `Revalidation rejected with ${response.status}: ${await response.text()}`,
+        `${site.label}: revalidation rejected with ${response.status}: ${await response.text()}`,
       )
     }
   } catch (error) {
-    req.payload.logger.warn(`Revalidation request failed: ${(error as Error).message}`)
+    req.payload.logger.warn(`${site.label}: revalidation request failed: ${(error as Error).message}`)
   }
 }
 
@@ -54,16 +54,39 @@ function tagsFor(collection: string, id: unknown): string[] {
   return ['blog', `${collection}:${id}`]
 }
 
-export const revalidateAfterChange: CollectionAfterChangeHook = ({ doc, collection, req }) => {
+/**
+ * Which frontends a document shows up on.
+ *
+ * Posts carry a `sites` list; categories and authors do not, because they are
+ * shared and can appear on every site. Both the new and the previous list
+ * count, so taking a post off a site purges that site too — otherwise it would
+ * keep serving the post until its timed revalidation.
+ */
+function sitesFor(...docs: unknown[]): Site[] {
+  const lists = docs.map((doc) => (doc as { sites?: unknown } | undefined)?.sites)
+  if (!lists.some(Array.isArray)) return sites
+
+  const values = new Set(lists.flatMap((list) => (Array.isArray(list) ? list : [])))
+  return [...values].map(siteByValue).filter((site): site is Site => Boolean(site))
+}
+
+export const revalidateAfterChange: CollectionAfterChangeHook = ({
+  doc,
+  previousDoc,
+  collection,
+  req,
+}) => {
   // Drafts are invisible to the public site, so purging for them would only
   // throw away a warm cache. Publishing flips `_status` and lands here again.
   if (doc?._status === 'draft') return doc
 
-  void ping(req, tagsFor(collection.slug, doc?.id))
+  const tags = tagsFor(collection.slug, doc?.id)
+  for (const site of sitesFor(doc, previousDoc)) void ping(req, site, tags)
   return doc
 }
 
 export const revalidateAfterDelete: CollectionAfterDeleteHook = ({ doc, collection, req }) => {
-  void ping(req, tagsFor(collection.slug, doc?.id))
+  const tags = tagsFor(collection.slug, doc?.id)
+  for (const site of sitesFor(doc)) void ping(req, site, tags)
   return doc
 }

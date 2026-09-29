@@ -15,6 +15,12 @@ frontend in this repo.
 
 ## Things worth knowing before editing
 
+**Two sites, one dashboard.** Every post has a `sites` field (Devora TV,
+Genova TV, or both) — see `src/sites.ts`. Each frontend fetches only its own
+posts with `where[sites][in]=devoratv` / `genovatv`. Categories and authors are
+shared. Preview opens the first selected site, and saving purges the cache of
+every site the post is on, or was on before the save.
+
 **Nine locales.** `src/locales.ts` mirrors the frontend's `src/i18n/config.ts`.
 They must stay identical. The admin panel shows the Dutch original next to an
 empty translation (`fallback: true`), but the frontend asks for
@@ -56,7 +62,8 @@ pnpm deploy
 
 Runs migrations against D1 and deploys the Worker. Set `FRONTEND_URL`,
 `FRONTEND_REVALIDATE_URL` and `FRONTEND_REVALIDATE_SECRET` as Worker secrets —
-the last must match `REVALIDATE_SECRET` on the frontend.
+the last must match `REVALIDATE_SECRET` on the frontend. Genova uses the same
+three with a `GENOVA_` prefix.
 
 ## Commands
 
