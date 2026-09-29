@@ -1,3 +1,4 @@
+import { getCloudflareContext } from '@opennextjs/cloudflare'
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, PayloadRequest } from 'payload'
 
 import { type Site, siteByValue, sites } from '../sites'
@@ -30,7 +31,9 @@ async function ping(req: PayloadRequest, site: Site, tags: string[]): Promise<vo
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-revalidate-secret': secret },
       body: JSON.stringify({ tags }),
-      signal: AbortSignal.timeout(5000),
+      // The frontend re-renders every index page before answering; under
+      // waitUntil the Worker gives us up to 30s after the response.
+      signal: AbortSignal.timeout(25000),
     })
 
     if (!response.ok) {
@@ -40,6 +43,22 @@ async function ping(req: PayloadRequest, site: Site, tags: string[]): Promise<vo
     }
   } catch (error) {
     req.payload.logger.warn(`${site.label}: revalidation request failed: ${(error as Error).message}`)
+  }
+}
+
+/**
+ * Runs the pings after the admin's response has been sent.
+ *
+ * A Worker cancels every outstanding fetch once its response is returned, so a
+ * bare `void ping()` never reached the frontend. `waitUntil` keeps the
+ * request alive; outside the Worker (local `pnpm dev`) there is no context and
+ * the promise simply runs on.
+ */
+function inBackground(work: Promise<unknown>): void {
+  try {
+    getCloudflareContext().ctx.waitUntil(work)
+  } catch {
+    void work
   }
 }
 
@@ -81,12 +100,12 @@ export const revalidateAfterChange: CollectionAfterChangeHook = ({
   if (doc?._status === 'draft') return doc
 
   const tags = tagsFor(collection.slug, doc?.id)
-  for (const site of sitesFor(doc, previousDoc)) void ping(req, site, tags)
+  inBackground(Promise.all(sitesFor(doc, previousDoc).map((site) => ping(req, site, tags))))
   return doc
 }
 
 export const revalidateAfterDelete: CollectionAfterDeleteHook = ({ doc, collection, req }) => {
   const tags = tagsFor(collection.slug, doc?.id)
-  for (const site of sitesFor(doc)) void ping(req, site, tags)
+  inBackground(Promise.all(sitesFor(doc).map((site) => ping(req, site, tags))))
   return doc
 }
